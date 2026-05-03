@@ -28,7 +28,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;background:#fff;padding:16px;border-radius:12px;border:1px solid var(--border);align-items:flex-end">
   <div class="field-group" style="width:150px"><label>Zona</label>
     <select name="zona"><option value="">Todas</option>
-      <?php foreach($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $filtroZona==$z['id']?'selected':'' ?>><?= $z['nombre'] ?></option><?php endforeach; ?>
+      <?php foreach($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $filtroZona==$z['id']?'selected':'' ?>><?= htmlspecialchars($z['nombre'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?></option><?php endforeach; ?>
     </select></div>
   <div class="field-group" style="width:140px"><label>Precio mínimo $</label><input type="number" name="precio_min" placeholder="0" value="<?= $filtroMin ?: '' ?>"></div>
   <div class="field-group" style="width:140px"><label>Precio máximo $</label><input type="number" name="precio_max" placeholder="Sin límite" value="<?= $filtroMax ?: '' ?>"></div>
@@ -42,7 +42,9 @@ require_once __DIR__ . '/../includes/layout.php';
   <div class="alert alert-info">Sin lotes que coincidan con los filtros aplicados. <a href="?" style="color:var(--navy);font-weight:600">Ver todos</a></div>
 <?php else: ?>
 <div class="lots-grid">
-  <?php foreach($lotes as $i=>$l): $bg=$bgs[$i%6]; $svcs=array_filter(explode(',',$l['servicios']??'')); ?>
+  <?php foreach($lotes as $i=>$l):
+  $bg = $bgs[abs($i) % count($bgs)];
+  $svcs = array_filter(explode(',', (string)($l['servicios'] ?? ''))); ?>
   <div class="lot-card" onclick="openModal('modal-lote-<?= $l['id'] ?>')">
     <div class="lot-img <?= $bg ?>">
       <span><?= $l['emoji'] ?: '🏡' ?></span>

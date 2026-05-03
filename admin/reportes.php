@@ -57,7 +57,7 @@ require_once __DIR__ . '/../includes/layout.php';
     <div class="field-group"><label>Hasta</label><input type="date" name="hasta" value="<?= $fechaHasta ?>"></div>
     <div class="field-group" style="width:140px"><label>Zona</label>
         <select name="zona"><option value="">Todas</option>
-            <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $zonaFiltro==$z['id']?'selected':'' ?>><?= $z['nombre'] ?></option><?php endforeach; ?>
+            <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $zonaFiltro==$z['id']?'selected':'' ?>><?= htmlspecialchars($z['nombre'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?></option><?php endforeach; ?>
         </select></div>
     <div class="field-group" style="width:140px"><label>Estado</label>
         <select name="estado">

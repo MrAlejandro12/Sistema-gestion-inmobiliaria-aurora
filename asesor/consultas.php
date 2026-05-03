@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 secureSessionStart();
 requireAuth(['asesor','admin']);
 $pdo = getDB();
-$uid = $_SESSION['user_id'];
+$uid = $_SESSION['user_id']; // used in both GET and POST handlers
 $rol = $_SESSION['rol'];
 
 // POST — responder consulta

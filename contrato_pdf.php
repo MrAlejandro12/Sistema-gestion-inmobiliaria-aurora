@@ -336,7 +336,7 @@ table tfoot td { font-weight: 700; background: #f8fafc; padding: 7px 10px; }
         </div>
     </div>
     <div class="download-bar-right">
-        <a href="javascript:history.back()" class="btn-dl btn-dl-outline">← Volver</a>
+        <button type="button" onclick="window.history.back()" class="btn-dl btn-dl-outline">← Volver</button>
         <button onclick="window.print()" class="btn-dl btn-dl-primary">📥 Guardar como PDF</button>
     </div>
 </div>

@@ -13,8 +13,9 @@ $sql = "SELECT * FROM auditoria WHERE DATE(created_at)=?";
 $params = [$fecha];
 if ($email) { $sql .= " AND email LIKE ?"; $params[] = "%$email%"; }
 $sql .= " ORDER BY created_at DESC LIMIT $limit";
-$stmt = $pdo->prepare($sql); $stmt->execute($params);
-$logs = $stmt->fetchAll();
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle='Auditoría del Sistema'; $pageSubtitle='Log inmutable — Ley 164 y Ley 393'; $activeNav='ad-audit';
 require_once __DIR__ . '/../includes/layout.php';

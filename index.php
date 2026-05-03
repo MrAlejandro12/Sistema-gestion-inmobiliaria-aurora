@@ -165,8 +165,7 @@ body::before{content:'';position:absolute;inset:0;background:radial-gradient(cir
       </button>
     </div>
     <div class="hint-box">
-      Todos los roles usan la contraseña: <strong>aurora123</strong><br>
-      El campo de contraseña <strong>no se autocompleta</strong> por seguridad — debes ingresarla manualmente.
+      El campo de contraseña <strong>no se autocompleta</strong> por seguridad — ingresa tu contraseña manualmente.
     </div>
   </div>
 </div>

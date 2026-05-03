@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create' || $action === 'update') {
-        $id       = (int)($_POST['id'] ?? 0);
+        $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
         $codigo   = trim($_POST['codigo'] ?? '');
         $nombre   = trim($_POST['nombre'] ?? '');
         $zona_id  = (int)($_POST['zona_id'] ?? 1);
@@ -44,11 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete') {
-        $id = (int)($_POST['id'] ?? 0);
-        $lote = $pdo->prepare("SELECT codigo,estado FROM lotes WHERE id=?");
-        $lote->execute([$id]);
-        $l = $lote->fetch();
-        if ($l && in_array($l['estado'], ['disponible','revision'])) {
+        $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
+        $stmtLote = $pdo->prepare("SELECT codigo, estado FROM lotes WHERE id = ?");
+        $stmtLote->execute([$id]);
+        $l = $stmtLote->fetch();
+        if ($l !== false && in_array($l['estado'], ['disponible','revision'])) {
             $pdo->prepare("DELETE FROM lotes WHERE id=?")->execute([$id]);
             auditLog("Eliminó lote {$l['codigo']}", 'lotes', $id);
             echo json_encode(['ok'=>true,'message'=>"Lote {$l['codigo']} eliminado"]);
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'cambiar_estado') {
-        $id     = (int)($_POST['id'] ?? 0);
+        $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
         $estado = $_POST['estado'] ?? '';
         $allowed = ['disponible','apartado','revision'];
         if (in_array($estado, $allowed)) {
@@ -103,7 +103,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-end">
   <div class="field-group" style="width:160px"><label>Zona</label>
     <select name="zona"><option value="">Todas</option>
-      <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $filtroZona==$z['id']?'selected':'' ?>><?= $z['nombre'] ?></option><?php endforeach; ?>
+      <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>" <?= $filtroZona==$z['id']?'selected':'' ?>><?= htmlspecialchars($z['nombre'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?></option><?php endforeach; ?>
     </select></div>
   <div class="field-group" style="width:140px"><label>Estado</label>
     <select name="estado">
@@ -174,7 +174,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <div class="form-row">
           <div class="field-group"><label>Zona *</label>
             <select name="zona_id" id="lote-zona">
-              <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>"><?= $z['nombre'] ?></option><?php endforeach; ?>
+              <?php foreach ($zonas as $z): ?><option value="<?= $z['id'] ?>"><?= htmlspecialchars($z['nombre'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?></option><?php endforeach; ?>
             </select></div>
           <div class="field-group"><label>Tipo</label>
             <select name="tipo" id="lote-tipo"><option>Residencial</option><option>Comercial</option><option>Industrial</option></select></div>

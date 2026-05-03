@@ -11,14 +11,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create') {
         $nombre = trim($_POST['nombre'] ?? '');
         $email  = trim($_POST['email']  ?? '');
-        $pass   = trim($_POST['password'] ?? 'aurora123');
+        $pass   = trim($_POST['password'] ?? DEFAULT_TEMP_PASSWORD);
         $rol    = $_POST['rol'] ?? 'cliente';
         $tel    = trim($_POST['telefono'] ?? '');
         $ci     = trim($_POST['ci'] ?? '');
         if (!$nombre || !$email) { echo json_encode(['ok'=>false,'message'=>'Nombre y email obligatorios']); exit; }
         // Check email unique
-        $exists = $pdo->prepare("SELECT id FROM usuarios WHERE email=?"); $exists->execute([$email]);
-        if ($exists->fetch()) { echo json_encode(['ok'=>false,'message'=>'El email ya está registrado']); exit; }
+        $stmtExists = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
+        $stmtExists->execute([$email]);
+        if ($stmtExists->fetch() !== false) {
+            echo json_encode(['ok'=>false,'message'=>'El email ya está registrado']); exit;
+        }
         $hash = password_hash($pass, PASSWORD_BCRYPT);
         $stmt = $pdo->prepare("INSERT INTO usuarios (nombre,email,password,rol,telefono,ci) VALUES (?,?,?,?,?,?)");
         $stmt->execute([$nombre,$email,$hash,$rol,$tel,$ci]);
@@ -37,9 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'toggle') {
-        $id = (int)($_POST['id'] ?? 0);
+        $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
         if ($id === $_SESSION['user_id']) { echo json_encode(['ok'=>false,'message'=>'No puedes desactivar tu propia cuenta']); exit; }
-        $u = $pdo->prepare("SELECT estado,email FROM usuarios WHERE id=?"); $u->execute([$id]); $u = $u->fetch();
+        $stmtU = $pdo->prepare("SELECT estado, email FROM usuarios WHERE id = ?");
+        $stmtU->execute([$id]);
+        $u = $stmtU->fetch();
+        if ($u === false) { echo json_encode(['ok'=>false,'message'=>'Usuario no encontrado']); exit; }
         $nuevo = $u['estado'] === 'activo' ? 'inactivo' : 'activo';
         $pdo->prepare("UPDATE usuarios SET estado=? WHERE id=?")->execute([$nuevo,$id]);
         auditLog("Cambió estado usuario {$u['email']} a $nuevo", 'usuarios', $id);
@@ -105,7 +111,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <div class="form-row">
           <div class="field-group"><label>Rol *</label>
             <select name="rol"><option value="cliente">Cliente</option><option value="asesor">Asesor</option><option value="legal">Legal</option><option value="admin">Admin</option></select></div>
-          <div class="field-group"><label>Contraseña</label><input type="text" name="password" placeholder="aurora123 (por defecto)" value="aurora123"></div>
+          <div class="field-group"><label>Contraseña</label><input type="text" name="password" placeholder="Contraseña temporal" value="<?= htmlspecialchars(DEFAULT_TEMP_PASSWORD) ?>"></div>
         </div>
         <div class="form-row">
           <div class="field-group"><label>Teléfono</label><input type="text" name="telefono" placeholder="+591 7X XXXXXX"></div>

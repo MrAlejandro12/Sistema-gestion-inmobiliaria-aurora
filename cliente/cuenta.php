@@ -2,10 +2,15 @@
 require_once __DIR__ . '/../config/db.php';
 secureSessionStart(); requireAuth(['cliente']);
 $pdo=getDB(); $uid=$_SESSION['user_id'];
-$cli=$pdo->prepare("SELECT c.*,u.nombre,u.email,u.telefono,u.ci,z.nombre zona_nombre,ua.nombre asesor_nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id LEFT JOIN zonas z ON z.id=c.zona_preferida LEFT JOIN usuarios ua ON ua.id=c.asesor_id WHERE c.usuario_id=?");
-$cli->execute([$uid]); $cli=$cli->fetch();
+$stmtCuenta = $pdo->prepare("SELECT c.*, u.nombre, u.email, u.telefono, u.ci, z.nombre zona_nombre, ua.nombre asesor_nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id LEFT JOIN zonas z ON z.id=c.zona_preferida LEFT JOIN usuarios ua ON ua.id=c.asesor_id WHERE c.usuario_id=?");
+$stmtCuenta->execute([$uid]);
+$cli = $stmtCuenta->fetch() ?: [];
 $pagos=[];
-if($cli){ $s=$pdo->prepare("SELECT p.*,l.codigo,l.nombre ln,l.precio FROM pagos p JOIN ventas v ON v.id=p.venta_id JOIN lotes l ON l.id=v.lote_id WHERE p.cliente_id=? ORDER BY p.fecha_pago DESC"); $s->execute([$cli['id']]); $pagos=$s->fetchAll(); }
+if(!empty($cli)){
+    $stmtPagosCuenta = $pdo->prepare("SELECT p.*, l.codigo, l.nombre ln, l.precio FROM pagos p JOIN ventas v ON v.id=p.venta_id JOIN lotes l ON l.id=v.lote_id WHERE p.cliente_id=? ORDER BY p.fecha_pago DESC");
+    $stmtPagosCuenta->execute([$cli['id']]);
+    $pagos = $stmtPagosCuenta->fetchAll();
+}
 $total=array_sum(array_column($pagos,'monto'));
 $pageTitle='Mi Cuenta'; $pageSubtitle='Estado financiero de tu cuenta'; $activeNav='cli-cuenta';
 require_once __DIR__.'/../includes/layout.php'; ?>

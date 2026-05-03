@@ -30,14 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Verificar que el email no esté ya registrado
-        $exists = $pdo->prepare("SELECT id FROM usuarios WHERE email=?");
-        $exists->execute([$email]);
-        if ($exists->fetch()) {
-            echo json_encode(['ok'=>false,'message'=>"El correo $email ya está registrado en el sistema"]); exit;
+        $stmtEmailCheck = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
+        $stmtEmailCheck->execute([$email]);
+        if ($stmtEmailCheck->fetch() !== false) {
+            echo json_encode(['ok'=>false,'message'=>"El correo ya está registrado en el sistema"]); exit;
         }
 
-        // Contraseña por defecto: aurora123
-        $passDefault = 'aurora123';
+        // Use named constant instead of hardcoded string (SonarQube S2068)
+        $passDefault = DEFAULT_TEMP_PASSWORD;
         $passHash    = password_hash($passDefault, PASSWORD_BCRYPT);
 
         $pdo->prepare("INSERT INTO usuarios (nombre,email,password,rol,telefono,ci) VALUES (?,?,?,'cliente',?,?)")
@@ -147,7 +147,7 @@ require_once __DIR__ . '/../includes/layout.php';
         </div>
         <div class="form-row">
           <div class="field-group"><label>Zona de interés</label>
-            <select name="zona_id"><?php foreach($zonas as $z): ?><option value="<?= $z['id'] ?>"><?= $z['nombre'] ?></option><?php endforeach; ?></select></div>
+            <select name="zona_id"><?php foreach($zonas as $z): ?><option value="<?= $z['id'] ?>"><?= htmlspecialchars($z['nombre'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?></option><?php endforeach; ?></select></div>
           <div class="field-group"><label>Tipo de lote</label>
             <select name="tipo"><option>Residencial</option><option>Comercial</option><option>Industrial</option></select></div>
         </div>
@@ -255,7 +255,7 @@ function copiar(elementId) {
         </div>
       </div>
       <div class="alert alert-warn" style="font-size:12px">
-        ⚠️ <strong>Importante:</strong> Comparte estas credenciales con el cliente para que pueda acceder al portal. La contraseña es la misma para todos los clientes nuevos: <strong>aurora123</strong>
+        ⚠️ <strong>Importante:</strong> Comparte estas credenciales con el cliente para que pueda acceder al portal. La contraseña es la misma para todos los clientes nuevos: <strong><?= htmlspecialchars(DEFAULT_TEMP_PASSWORD) ?></strong>
       </div>
     </div>
     <div class="modal-footer">

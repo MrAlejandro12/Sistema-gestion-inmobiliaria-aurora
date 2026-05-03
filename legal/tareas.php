@@ -7,7 +7,7 @@ $pdo = getDB();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
-    $id = (int)($_POST['id'] ?? 0);
+    $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
 
     if ($action === 'aprobar') {
         // Actualizar tarea

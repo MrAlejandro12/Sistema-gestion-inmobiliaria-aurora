@@ -6,13 +6,15 @@ requireAuth(['cliente']);
 $pdo = getDB();
 $uid = $_SESSION['user_id'];
 
-$cliente = $pdo->prepare("SELECT c.*,u.nombre,u.email,u.telefono,u.ci,z.nombre zona_nombre,ua.nombre asesor_nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id LEFT JOIN zonas z ON z.id=c.zona_preferida LEFT JOIN usuarios ua ON ua.id=c.asesor_id WHERE c.usuario_id=?");
-$cliente->execute([$uid]); $cli = $cliente->fetch();
+$stmtCliente = $pdo->prepare("SELECT c.*, u.nombre, u.email, u.telefono, u.ci, z.nombre zona_nombre, ua.nombre asesor_nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id LEFT JOIN zonas z ON z.id=c.zona_preferida LEFT JOIN usuarios ua ON ua.id=c.asesor_id WHERE c.usuario_id=?");
+$stmtCliente->execute([$uid]);
+$cli = $stmtCliente->fetch() ?: [];
 
 $pagos = [];
-if ($cli) {
-    $stmt=$pdo->prepare("SELECT p.*,l.codigo FROM pagos p JOIN ventas v ON v.id=p.venta_id JOIN lotes l ON l.id=v.lote_id WHERE p.cliente_id=? ORDER BY p.fecha_pago DESC");
-    $stmt->execute([$cli['id']]); $pagos=$stmt->fetchAll();
+if (!empty($cli)) {
+    $stmtPagos = $pdo->prepare("SELECT p.*, l.codigo FROM pagos p JOIN ventas v ON v.id=p.venta_id JOIN lotes l ON l.id=v.lote_id WHERE p.cliente_id=? ORDER BY p.fecha_pago DESC");
+    $stmtPagos->execute([$cli['id']]);
+    $pagos = $stmtPagos->fetchAll();
 }
 
 $pageTitle='Mi Panel'; $pageSubtitle='Bienvenido, '.$_SESSION['nombre']; $activeNav='cli-dash';

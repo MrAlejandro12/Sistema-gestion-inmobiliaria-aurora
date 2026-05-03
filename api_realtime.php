@@ -83,7 +83,7 @@ switch ($action) {
     // ── Responder una consulta (asesor) ───────────────────────
     case 'responder_consulta':
         if (!in_array($rol, ['asesor','admin'])) { jsonResponse(['error' => 'Sin permiso'], 403); }
-        $id = (int)($_POST['id'] ?? 0);
+        $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
         $resp = trim($_POST['respuesta'] ?? '');
         if (!$id || !$resp) { jsonResponse(['ok' => false, 'message' => 'Datos incompletos']); }
         $pdo->prepare("UPDATE consultas_cliente SET estado='respondida', respuesta=?, respondido_por=?, respondido_at=NOW() WHERE id=?")

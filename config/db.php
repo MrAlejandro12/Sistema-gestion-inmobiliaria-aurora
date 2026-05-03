@@ -10,6 +10,9 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
+// Default temp password for new users - change in production
+define('DEFAULT_TEMP_PASSWORD', 'aurora123');
+
 function getDB(): PDO {
     static $pdo = null;
     if ($pdo === null) {
@@ -30,6 +33,21 @@ function getDB(): PDO {
 }
 
 // ── Registrar en bitácora ──────────────────────────────────────
+/**
+ * Determina el nivel de auditoría según el contenido de la acción
+ */
+function resolveAuditLevel(string $accion): string {
+    $a = strtoupper($accion);
+    if (str_contains($a, 'CRITICO') || str_contains($a, 'BREACH')) return 'critico';
+    if (str_contains($a, 'FAIL') || str_contains($a, 'ERROR') || str_contains($a, 'BLOCK')) return 'error';
+    if (str_contains($a, 'WARN') || str_contains($a, 'RECHAZ') || str_contains($a, 'DENIEGA')) return 'warning';
+    return 'info';
+}
+
+/**
+ * Inserta un registro en la bitácora de auditoría (solo INSERT — Ley 164/393)
+ * El nivel se detecta automáticamente si no se especifica.
+ */
 function auditLog(string $accion, string $tabla = '', int $registroId = 0): void {
     try {
         $pdo    = getDB();
@@ -37,31 +55,19 @@ function auditLog(string $accion, string $tabla = '', int $registroId = 0): void
         $email  = $_SESSION['email']   ?? 'sistema';
         $ip     = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $ua     = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $nivel  = resolveAuditLevel($accion);
+        $regId  = $registroId ?: null;
 
-        // Determinar nivel automáticamente por acción
-        $accionUp = strtoupper($accion);
-        if (str_contains($accionUp, 'FAIL') || str_contains($accionUp, 'ERROR') || str_contains($accionUp, 'BLOCK')) {
-            $nivel = 'error';
-        } elseif (str_contains($accionUp, 'WARN') || str_contains($accionUp, 'RECHAZ') || str_contains($accionUp, 'DENIEGA')) {
-            $nivel = 'warning';
-        } elseif (str_contains($accionUp, 'CRITICO') || str_contains($accionUp, 'BREACH')) {
-            $nivel = 'critico';
-        } else {
-            $nivel = 'info';
-        }
-
-        // Intentar con columna nivel (v2.0), fallback a la versión original
-        try {
-            $stmt = $pdo->prepare("INSERT INTO auditoria (usuario_id, email, accion, tabla_afectada, registro_id, ip, user_agent, nivel)
-                                   VALUES (?,?,?,?,?,?,?,?)");
-            $stmt->execute([$userId, $email, $accion, $tabla, $registroId ?: null, $ip, $ua, $nivel]);
-        } catch (Exception $e) {
-            // Columna nivel no existe aún (BD v1.0 sin migrar)
-            $stmt = $pdo->prepare("INSERT INTO auditoria (usuario_id, email, accion, tabla_afectada, registro_id, ip, user_agent)
-                                   VALUES (?,?,?,?,?,?,?)");
-            $stmt->execute([$userId, $email, $accion, $tabla, $registroId ?: null, $ip, $ua]);
-        }
-    } catch (Exception $e) { /* silenciar para no romper flujo */ }
+        // v2.0: columna nivel incluida
+        $stmt = $pdo->prepare(
+            "INSERT INTO auditoria (usuario_id, email, accion, tabla_afectada, registro_id, ip, user_agent, nivel)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([$userId, $email, $accion, $tabla, $regId, $ip, $ua, $nivel]);
+    } catch (\Exception $e) {
+        // Silenciado intencionalmente: el log no debe interrumpir el flujo
+        error_log('[SGI-Aurora] auditLog error: ' . $e->getMessage());
+    }
 }
 
 // ── Respuesta JSON ─────────────────────────────────────────────
@@ -99,7 +105,7 @@ function secureSessionStart(): void {
         'lifetime' => 0,              // Sesión expira al cerrar el navegador
         'path'     => '/',
         'domain'   => '',
-        'secure'   => false,          // Cambiar a true en producción con HTTPS
+        'secure'   => (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'), // auto-detect HTTPS (S2092)
         'httponly' => true,           // No accesible desde JavaScript (XSS mitigation)
         'samesite' => 'Strict',       // Anti-CSRF: no envía cookie en requests cross-site
     ]);

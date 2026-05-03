@@ -7,7 +7,9 @@ $bgs=['bg1','bg2','bg3','bg4','bg5','bg6'];
 $pageTitle='Lotes'; $pageSubtitle='Lotes disponibles y en revisión'; $activeNav='as-lotes';
 require_once __DIR__.'/../includes/layout.php'; ?>
 <div class="lots-grid">
-<?php foreach($lotes as $i=>$l): $bg=$bgs[$i%6]; $svcs=array_filter(explode(',',$l['servicios']??'')); ?>
+<?php foreach($lotes as $i=>$l):
+  $bg = $bgs[abs($i) % count($bgs)];
+  $svcs = array_filter(explode(',', (string)($l['servicios'] ?? ''))); ?>
 <div class="lot-card">
   <div class="lot-img <?= $bg ?>"><span><?= $l['emoji']?:'🏡' ?></span>
     <div class="lot-badge"><span class="badge <?= $l['estado']==='disponible'?'badge-green':'badge-gold' ?>"><?= $l['estado'] ?></span></div>
@@ -21,7 +23,7 @@ require_once __DIR__.'/../includes/layout.php'; ?>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <?php if($l['estado']==='disponible'&&$l['verificado']): ?>
-        <button class="btn btn-primary btn-sm" onclick="showToast('Lote <?= $l['codigo'] ?> listo para asignar a cliente','ok')">Asignar cliente</button>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Lote <?= htmlspecialchars($l['codigo'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8') ?> listo para asignar a cliente','ok')">Asignar cliente</button>
       <?php elseif(!$l['verificado']): ?>
         <span class="badge badge-orange">⏳ Sin verificar DDRR</span>
       <?php endif; ?>

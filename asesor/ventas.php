@@ -16,8 +16,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $modal  = $_POST['modalidad'] ?? 'Contado';
         if (!$cid||!$lid||$monto<=0) { echo json_encode(['ok'=>false,'message'=>'Datos incompletos']); exit; }
         // Verificar lote disponible y verificado
-        $lote=$pdo->prepare("SELECT * FROM lotes WHERE id=? AND estado='disponible' AND verificado=1"); $lote->execute([$lid]); $l=$lote->fetch();
-        if(!$l) { echo json_encode(['ok'=>false,'message'=>'El lote no está disponible o no tiene verificación legal']); exit; }
+        $stmtLote2 = $pdo->prepare("SELECT * FROM lotes WHERE id = ? AND estado = 'disponible' AND verificado = 1");
+        $stmtLote2->execute([$lid]);
+        $l = $stmtLote2->fetch();
+        if ($l === false) { echo json_encode(['ok'=>false,'message'=>'El lote no está disponible o no tiene verificación legal']); exit; }
         $pdo->prepare("INSERT INTO ventas (cliente_id,lote_id,asesor_id,monto,modalidad,fecha_venta) VALUES (?,?,?,?,?,CURDATE())")
             ->execute([$cid,$lid,$_SESSION['user_id'],$monto,$modal]);
         $vid=$pdo->lastInsertId();
@@ -33,8 +35,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $comp  = trim($_POST['comprobante'] ?? '');
         if ($monto<=0) { echo json_encode(['ok'=>false,'message'=>'El monto es obligatorio']); exit; }
         if ($monto>1000 && !$comp) { echo json_encode(['ok'=>false,'message'=>'⚠️ Ley 393: Comprobante obligatorio para montos superiores a USD 1,000']); exit; }
-        $venta=$pdo->prepare("SELECT cliente_id FROM ventas WHERE id=?"); $venta->execute([$vid]); $v=$venta->fetch();
-        if(!$v) { echo json_encode(['ok'=>false,'message'=>'Venta no encontrada']); exit; }
+        $stmtVenta = $pdo->prepare("SELECT cliente_id FROM ventas WHERE id = ?");
+        $stmtVenta->execute([$vid]);
+        $v = $stmtVenta->fetch();
+        if ($v === false) { echo json_encode(['ok'=>false,'message'=>'Venta no encontrada']); exit; }
         $pdo->prepare("INSERT INTO pagos (venta_id,cliente_id,monto,metodo,comprobante,fecha_pago,registrado_por) VALUES (?,?,?,?,?,CURDATE(),?)")
             ->execute([$vid,$v['cliente_id'],$monto,$met,$comp,$_SESSION['user_id']]);
         $pid=$pdo->lastInsertId();
@@ -55,12 +59,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
 }
 
-$ventas = $pdo->query("
+$stmtVentas = $pdo->prepare("
     SELECT v.*, u.nombre cliente_nombre, l.codigo, l.nombre lote_nombre
     FROM ventas v JOIN clientes c ON c.id=v.cliente_id JOIN usuarios u ON u.id=c.usuario_id
-    JOIN lotes l ON l.id=v.lote_id WHERE v.asesor_id={$_SESSION['user_id']} ORDER BY v.created_at DESC
-")->fetchAll();
-$clientes = $pdo->query("SELECT c.id, u.nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id WHERE c.asesor_id={$_SESSION['user_id']}")->fetchAll();
+    JOIN lotes l ON l.id=v.lote_id WHERE v.asesor_id=? ORDER BY v.created_at DESC
+");
+$stmtVentas->execute([$uid]);
+$ventas = $stmtVentas->fetchAll();
+$stmtCli2 = $pdo->prepare("SELECT c.id, u.nombre FROM clientes c JOIN usuarios u ON u.id=c.usuario_id WHERE c.asesor_id=?");
+$stmtCli2->execute([$uid]);
+$clientes = $stmtCli2->fetchAll();
 $lotes    = $pdo->query("SELECT id,codigo,nombre,precio FROM lotes WHERE estado='disponible' AND verificado=1 ORDER BY codigo")->fetchAll();
 $pagos    = $pdo->query("SELECT p.*, u.nombre cliente_nombre, l.codigo FROM pagos p JOIN clientes c ON c.id=p.cliente_id JOIN usuarios u ON u.id=c.usuario_id JOIN ventas v ON v.id=p.venta_id JOIN lotes l ON l.id=v.lote_id ORDER BY p.created_at DESC LIMIT 20")->fetchAll();
 

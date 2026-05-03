@@ -35,9 +35,23 @@ header('X-Content-Type-Options: nosniff');
 
 // ── 5. Referrer Policy ───────────────────────────────────────
 header('Referrer-Policy: strict-origin-when-cross-origin');
+// Prevent response caching of sensitive pages (SonarQube S5042)
+header('Cache-Control: no-store, no-cache, must-revalidate, private');
+header('Pragma: no-cache');
+// Vary header to prevent cache poisoning
+header('Vary: Accept-Encoding');
 
 // ── 6. Permissions Policy ────────────────────────────────────
-header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+// SonarQube S5542: Define explicit permissions policy
+header('Permissions-Policy: ' .
+    'geolocation=(), ' .
+    'microphone=(), ' .
+    'camera=(), ' .
+    'payment=(), ' .
+    'usb=(), ' .
+    'magnetometer=(), ' .
+    'accelerometer=()' .
+'');
 
 // ── 7. HSTS (solo producción — quitar en localhost) ──────────
 // header('Strict-Transport-Security: max-age=31536000; includeSubDomains');

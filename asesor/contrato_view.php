@@ -1,6 +1,7 @@
 <?php
 // asesor/contrato_view.php  (también accesible desde legal/contrato_view.php)
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/contrato_shared.php';
 secureSessionStart();
 requireAuth(['asesor', 'legal', 'admin']);
 
@@ -54,7 +55,9 @@ $ct = $stmt->fetch();
 
 if (!$ct) {
     http_response_code(404);
-    die('<div style="font-family:sans-serif;padding:40px;text-align:center"><h2>Contrato no encontrado</h2><a href="javascript:history.back()">← Volver</a></div>');
+    http_response_code(404);
+echo '<div style="font-family:sans-serif;padding:40px;text-align:center"><h2>Contrato no encontrado</h2><?php contratoAcciones($contrato ?? [], $rol); ?></div>';
+exit;
 }
 
 // Verificar acceso: asesor solo puede ver sus propios contratos
@@ -64,7 +67,9 @@ if ($_SESSION['rol'] === 'asesor') {
     $row = $check->fetch();
     if (!$row || $row['asesor_id'] != $_SESSION['user_id']) {
         http_response_code(403);
-        die('<div style="font-family:sans-serif;padding:40px;text-align:center"><h2>Sin permisos para ver este contrato</h2></div>');
+        http_response_code(403);
+echo '<div style="font-family:sans-serif;padding:40px;text-align:center"><h2>Sin permisos para ver este contrato</h2></div>';
+exit;
     }
 }
 
@@ -261,7 +266,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <!-- Barra herramientas -->
 <div class="ct-toolbar">
     <div class="ct-toolbar-left">
-        <a href="javascript:history.back()" class="btn btn-outline btn-sm">← Volver</a>
+        <?php contratoAcciones($contrato ?? [], $rol); ?>
         <div>
             <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:14px"><?= $numContrato ?></div>
             <div style="font-size:12px;color:var(--muted)"><?= htmlspecialchars($ct['cliente_nombre']) ?> · <?= htmlspecialchars($ct['lote_codigo']) ?></div>

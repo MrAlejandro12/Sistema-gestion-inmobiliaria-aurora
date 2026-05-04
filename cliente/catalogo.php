@@ -5,6 +5,29 @@ secureSessionStart();
 requireAuth(['cliente','asesor','admin']);
 $pdo = getDB();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    ob_end_clean();
+    header('Content-Type: application/json');
+    $action = $_POST['action'] ?? '';
+    if ($action === 'interes') {
+        $lote_id = (int)($_POST['lote_id'] ?? 0);
+        $cli = $pdo->prepare("SELECT c.id, c.asesor_id FROM clientes c WHERE c.usuario_id=?");
+        $cli->execute([$_SESSION['user_id']]);
+        $cli = $cli->fetch();
+        if (!$cli) { echo json_encode(['ok'=>false,'message'=>'Perfil de cliente no encontrado']); exit; }
+        $exists = $pdo->prepare("SELECT id FROM solicitudes WHERE cliente_id=? AND lote_id=? AND estado NOT IN ('cerrada','cancelada')");
+        $exists->execute([$cli['id'], $lote_id]);
+        if ($exists->fetch()) { echo json_encode(['ok'=>false,'message'=>'Ya enviaste interés en este lote']); exit; }
+        $pdo->prepare("INSERT INTO solicitudes (cliente_id, lote_id, estado) VALUES (?,?,'pendiente')")->execute([$cli['id'], $lote_id]);
+        $newId = $pdo->lastInsertId();
+        auditLog("Envió interés en lote #$lote_id", 'solicitudes', $newId);
+        echo json_encode(['ok'=>true,'message'=>'¡Solicitud enviada! Tu asesor la verá en breve.']);
+        exit;
+    }
+    exit;
+}
+
+
 $filtroZona = (int)($_GET['zona'] ?? 0);
 $filtroMax  = (float)($_GET['precio_max'] ?? 0);
 $filtroMin  = (float)($_GET['precio_min'] ?? 0);
@@ -81,11 +104,23 @@ require_once __DIR__ . '/../includes/layout.php';
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('modal-lote-<?= $l['id'] ?>')">Cerrar</button>
-        <button class="btn btn-primary" onclick="showToast('Solicitud enviada a tu asesor','ok');closeModal('modal-lote-<?= $l['id'] ?>')">📤 Me interesa este lote</button>
+        <button class="btn btn-primary" onclick="enviarInteres(<?= $l['id'] ?>, this); closeModal('modal-lote-<?= $l['id'] ?>')">📤 Me interesa este lote</button>
       </div>
     </div>
   </div>
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
+<script>
+async function enviarInteres(loteId, btn) {
+  const fd = new FormData();
+  fd.append('action', 'interes');
+  fd.append('lote_id', loteId);
+  try {
+    const r = await fetch(window.location.pathname, {method:'POST', body:fd});
+    const d = await r.json();
+    showToast(d.message, d.ok?'ok':'err');
+  } catch(e) { showToast('Error de conexión','err'); }
+}
+</script>
 <?php require_once __DIR__ . '/../includes/layout_end.php'; ?>

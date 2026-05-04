@@ -27,7 +27,7 @@ function kpiCard(string $label, string $value, string $icon, string $color = 'bl
   <div class="kpi-icon">{$safeIcon}</div>
   <div class="kpi-label">{$safeLabel}</div>
   <div class="kpi-value">{$safeValue}</div>
-  {$safeSub ? "<div class="kpi-sub">{$safeSub}</div>" : ''}
+  <?php echo $safeSub ? "<div class=\"kpi-sub\">{$safeSub}</div>" : ''; ?>
 </div>
 HTML;
 }

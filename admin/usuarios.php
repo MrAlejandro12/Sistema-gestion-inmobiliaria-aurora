@@ -1,10 +1,13 @@
 <?php
+ob_start();
+require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../config/db.php';
 secureSessionStart();
 requireAuth(['admin']);
 $pdo = getDB();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') { 
+    ob_end_clean();
     header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
 
@@ -100,7 +103,7 @@ require_once __DIR__ . '/../includes/layout.php';
 <div class="modal-bg" id="modal-usuario">
   <div class="modal">
     <div class="modal-header"><h3>👤 Crear nuevo usuario</h3><button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
-    <form id="form-usuario" method="POST" action="/sgi_aurora/admin/usuarios.php">
+    <form id="form-usuario" method="POST" action="usuarios.php">
     <?= csrf_field() ?>
       <input type="hidden" name="action" value="create">
       <div class="modal-body">
@@ -134,7 +137,7 @@ document.getElementById('form-usuario').addEventListener('submit', async functio
   const btn = this.querySelector('[type=submit]');
   if(btn){ btn.disabled=true; btn.textContent='Creando...'; }
   try {
-    const res  = await fetch(this.action||window.location.href, {method:'POST', body:new FormData(this)});
+    const res = await fetch(window.location.pathname, {method:'POST', body:new FormData(this)});
     const data = await res.json();
     if(data.ok && data.credentials) {
       closeModal('modal-usuario');
@@ -157,7 +160,7 @@ document.getElementById('form-usuario').addEventListener('submit', async functio
 function toggleUser(id, estado) {
   const msg = estado==='activo' ? '¿Desactivar este usuario?' : '¿Activar este usuario?';
   if(confirm(msg)) {
-    fetch('/sgi_aurora/admin/usuarios.php',{
+    fetch('usuarios.php',{
       method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:'action=toggle&id='+id
     }).then(r=>r.json()).then(d=>{ showToast(d.message,d.ok?'ok':'err'); if(d.ok) setTimeout(()=>location.reload(),800); });

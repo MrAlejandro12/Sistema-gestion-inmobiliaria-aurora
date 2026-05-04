@@ -29,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("INSERT INTO lotes (codigo,nombre,zona_id,direccion,superficie,precio,tipo,servicios,estado) VALUES (?,?,?,?,?,?,?,?,'revision')");
                 $stmt->execute([$codigo,$nombre,$zona_id,$dir,$sup,$precio,$tipo,$servicios]);
                 $newId = $pdo->lastInsertId();
+                // Crear tarea de verificación legal automáticamente
+                $uid_reg = $_SESSION['user_id'] ?? 1;
+                $pdo->prepare("INSERT INTO tareas_legales (lote_id, solicitado_por, estado, prioridad) VALUES (?,?,'pendiente','normal')")
+                    ->execute([$newId, $uid_reg]);
                 auditLog("Registró lote $codigo: $nombre", 'lotes', $newId);
                 echo json_encode(['ok'=>true,'message'=>"Lote $codigo registrado — enviado a verificación legal",'reload'=>true]);
             } else {
@@ -207,7 +211,23 @@ require_once __DIR__ . '/../includes/layout.php';
 </div>
 
 <script>
-submitForm('form-lote', 'Lote guardado exitosamente');
+document.getElementById('form-lote').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector('[type=submit]');
+  if(btn){ btn.disabled=true; btn.textContent='Guardando...'; }
+  try {
+    const res = await fetch(window.location.pathname, {method:'POST', body:new FormData(this)});
+    const data = await res.json();
+    if(data.ok) {
+      showToast(data.message||'Lote guardado', 'ok');
+      closeModal('modal-lote');
+      setTimeout(()=>location.reload(), 900);
+    } else {
+      showToast(data.message||'Error', 'err');
+    }
+  } catch(e){ showToast('Error de conexión','err'); }
+  finally { if(btn){ btn.disabled=false; btn.textContent=btn.dataset.label||'Guardar lote'; } }
+});
 
 function editLote(l) {
   document.getElementById('modal-lote-title').textContent = '✏️ Editar lote ' + l.codigo;

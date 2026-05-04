@@ -1,7 +1,9 @@
 <?php
+ob_start();
+require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../config/db.php';
 secureSessionStart();
-requireAuth(['legal', 'admin']);
+requireAuth(['legal','admin']);
 $pdo = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -1,9 +1,10 @@
 <?php
-// asesor/ventas.php
+require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../config/db.php';
 secureSessionStart();
 requireAuth(['asesor','admin']);
 $pdo = getDB();
+$uid = $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     header('Content-Type: application/json');
